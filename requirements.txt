@@ -1,0 +1,6 @@
+bokeh
+holoviews
+hvplot
+polars
+requests
+streamlit
