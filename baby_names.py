@@ -5,19 +5,15 @@ Created by: [Ryan Parker](http://github.com/rparkr "See Ryan's GitHub profile")
 """
 
 # Built-in packages
-from io import BytesIO  #, StringIO
+from io import BytesIO
 import zipfile
 
 # External packages
 from bokeh.embed import file_html
 import holoviews as hv
-
-# import hvplot
-# import hvplot.polars
 import polars as pl
 import requests
 import streamlit as st
-# from streamlit_bokeh3_events import streamlit_bokeh3_events
 import streamlit.components.v1 as components
 
 hv.extension("bokeh")
@@ -27,7 +23,7 @@ st.set_page_config(
     page_title="Baby name trends",
     page_icon="",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
 )
 
 
@@ -123,7 +119,7 @@ years = st.sidebar.slider(
     label="Years",
     min_value=df["year"].min(),
     max_value=(max_year := df["year"].max()),
-    value=(2015, max_year)
+    value=(2015, max_year),
 )
 
 # Display the options
@@ -149,51 +145,34 @@ with col4:
     groupby_gender = col4.toggle(
         label="Group by gender",
         value=True,
-        help="When turned off, specify the gender in the sidebar menu to analyze name trends by gender"
+        help="When turned off, specify the gender in the sidebar menu to analyze name trends by gender",
     )
 
 gender_select = st.sidebar.selectbox(
-    label="Gender",
-    options=["F", "M"],
-    index=0,
-    disabled=groupby_gender
+    label="Gender", options=["F", "M"], index=0, disabled=groupby_gender
 )
 
 # Create the plot based on the chosen options
-plot = df.filter(
-    (pl.col("name") == first_name)
-    & (pl.col("state").is_in(states))
-    & (pl.col("year").is_between(*years))
-    & (True if groupby_gender else (pl.col("gender") == gender_select))
-).plot.line(
-    x="year",
-    y="rank" if use_rank else "popularity",
-    by=["state", "gender"] if groupby_gender else "state",
-    title=f"Popularity of name: {first_name}",
-    flip_yaxis=True if use_rank else False,
-    height=400,
-    # xlim=years,
-)
-
-# Display the plot
-# st.bokeh_chart(plot)  # <-- does not work with Bokeh >= 3.0.0
-
-# See: https://github.com/streamlit/streamlit/issues/5858#issuecomment-1793784439
-# and: https://discourse.holoviz.org/t/get-underlying-bokeh-figure-object-back-from-hvplot/2918/2
-p = hv.render(plot, backend="bokeh")
-components.html(file_html(p, "cdn"), height=800)
-# plot_html = StringIO()
-# hvplot.save(plot, plot_html, fmt="html")
-# components.html(plot_html.read(), height=800)
-# components.html(file_html(plot, "cdn", ), height=800)
-
-# Use a dedicated Streamlit component
-# See: https://github.com/streamlit/streamlit/issues/5858#issuecomment-1858924021
-# and: https://github.com/ChristophNa/streamlit-bokeh3-events
-# display_plot = streamlit_bokeh3_events(
-#     bokeh_plot=plot,
-#     refresh_on_update=True,
-#     debounce_time=0,
-#     override_height=600,
-#     key="name_trend_plot"
-# )
+# Only show the plot once a name has been selected
+if first_name:
+    plot = df.filter(
+        (pl.col("name") == first_name)
+        & (pl.col("state").is_in(states))
+        & (pl.col("year").is_between(*years))
+        & (True if groupby_gender else (pl.col("gender") == gender_select))
+    ).plot.line(
+        x="year",
+        y="rank" if use_rank else "popularity",
+        by=["state", "gender"] if groupby_gender else "state",
+        title=f"Popularity of name: {first_name}",
+        flip_yaxis=True if use_rank else False,
+        height=400,
+        # xlim=years,
+    )
+    # Display the plot
+    # See: https://github.com/streamlit/streamlit/issues/5858#issuecomment-1793784439
+    # and: https://discourse.holoviz.org/t/get-underlying-bokeh-figure-object-back-from-hvplot/2918/2
+    p = hv.render(plot, backend="bokeh")
+    components.html(file_html(p, "cdn"), height=800)
+else:
+    info_box = st.info("Type a first name in the `Name` field above")
