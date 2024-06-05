@@ -17,6 +17,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 hv.extension("bokeh")
+# hv.extension("plotly")
 pl.enable_string_cache()
 
 st.set_page_config(
@@ -166,7 +167,7 @@ if first_name:
         by=["state", "gender"] if groupby_gender else "state",
         title=f"Popularity of name: {first_name}",
         flip_yaxis=True if use_rank else False,
-        height=400,
+        # height=600,
         # xlim=years,
     )
     # Display the plot
@@ -174,5 +175,6 @@ if first_name:
     # and: https://discourse.holoviz.org/t/get-underlying-bokeh-figure-object-back-from-hvplot/2918/2
     p = hv.render(plot, backend="bokeh")
     components.html(file_html(p, "cdn"), height=800)
+    # plot_displayed = st.plotly_chart(hv.render(plot, backend="plotly"))
 else:
     info_box = st.info("Type a first name in the `Name` field above")
