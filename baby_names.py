@@ -167,14 +167,16 @@ if first_name:
         by=["state", "gender"] if groupby_gender else "state",
         title=f"Popularity of name: {first_name}",
         flip_yaxis=True if use_rank else False,
+        # width=800,
         # height=600,
+        responsive=True,
         # xlim=years,
     )
     # Display the plot
     # See: https://github.com/streamlit/streamlit/issues/5858#issuecomment-1793784439
     # and: https://discourse.holoviz.org/t/get-underlying-bokeh-figure-object-back-from-hvplot/2918/2
     p = hv.render(plot, backend="bokeh")
-    components.html(file_html(p, "cdn"), height=800)
+    components.html(file_html(p, "cdn"), height=400)
     # plot_displayed = st.plotly_chart(hv.render(plot, backend="plotly"))
 else:
     info_box = st.info("Type a first name in the `Name` field above")
