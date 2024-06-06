@@ -230,6 +230,8 @@ if first_name:
         # See: https://github.com/streamlit/streamlit/issues/5858#issuecomment-1793784439
         # and: https://discourse.holoviz.org/t/get-underlying-bokeh-figure-object-back-from-hvplot/2918/2
         p = hv.render(plot, backend="bokeh")
+        # Hide the toolbar to save space. See: https://stackoverflow.com/a/59108510/17005348
+        # p.toolbar.autohide = True
         components.html(file_html(p, "cdn"), height=400)
         # plot_displayed = st.plotly_chart(hv.render(plot, backend="plotly"))
     else:
