@@ -112,71 +112,129 @@ def load_data() -> pl.DataFrame:
     return df
 
 
+def find_matching_rows(
+    df: pl.DataFrame, text: str, years: list, states: list, starts_with: bool = False
+) -> pl.Series:
+    """Return a boolean series of matching rows"""
+    result = (
+        (
+            (df["name"] == text.capitalize())
+            if not starts_with
+            else (df["name"].str.starts_with(text.capitalize()))
+        )
+        & (df["year"].is_in(years))
+        & (df["state"].is_in(states))
+    )
+    return result
+
+
+# For ranking the returned results, see: https://github.com/bnm3k/polars-fuzzy-match?tab=readme-ov-file
+def filter_name(
+    df: pl.DataFrame, col: str, text: str, n_rows: int = 10
+) -> pl.DataFrame:
+    """Filter a column of the dataframe and return matches."""
+    mask = find_matching_rows(df, text, years, states, starts_with=True)
+    return df[col].filter(mask).unique().sort().head(n_rows)
+
+
+def check_match(df: pl.DataFrame, text: str, years: list, states: list) -> bool:
+    result = find_matching_rows(df, text, years, states)
+    return result.any()
+
+
 df = load_data()
-# st.write(df)
 # st.write(df.estimated_size(unit="megabytes"))
 
-years = st.sidebar.slider(
+
+def show_matches(key):
+    matches.dataframe(
+        pl.DataFrame(
+            filter_name(df, col="name", text=st.session_state[key], n_rows=10)
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+# Display the options
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    first_name = col1.text_input(
+        label="Name",
+        value=None,
+        key="first_name_input",
+        # on_change=show_matches,
+        # args=("first_name_input",)
+    )
+    # Selectbox version with autocomplete (slow because the list is so long)
+    # first_name = col1.selectbox(
+    #     label="Name",
+    #     index=None,
+    #     placeholder="Search for a first name",
+    #     options=df["name"].unique().sort(),
+    # )
+    matches = col1.container(height=100)
+with col2:
+    states = col2.multiselect(
+        label="States", default=["nation"], options=df["state"].unique()
+    )
+with col3:
+    gender_select = col3.multiselect(
+        label="Gender",
+        default=["F", "M"],
+        options=["F", "M"],
+        help="Select the gender",
+    )
+with col4:
+    use_rank = col4.toggle(
+        label="Metric: rank",
+        value=True,
+        help="Toggle between displaying rank or percentage of names for that gender, year, and state",
+    )
+
+years = st.slider(
     label="Years",
     min_value=df["year"].min(),
     max_value=(max_year := df["year"].max()),
     value=(2015, max_year),
 )
 
-# Display the options
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    first_name = col1.selectbox(
-        label="Name",
-        index=None,
-        placeholder="Search for a first name",
-        options=df["name"].unique().sort(),
-    )
-with col2:
-    states = col2.multiselect(
-        label="States", default=["nation"], options=df["state"].unique()
-    )
-with col3:
-    use_rank = col3.toggle(
-        label="Display rank",
-        value=True,
-        help="Toggle between displaying rank or percentage of names for that gender, year, and state",
-    )
-with col4:
-    groupby_gender = col4.toggle(
-        label="Group by gender",
-        value=True,
-        help="When turned off, specify the gender in the sidebar menu to analyze name trends by gender",
-    )
-
-gender_select = st.sidebar.selectbox(
-    label="Gender", options=["F", "M"], index=0, disabled=groupby_gender
-)
+# In case the user removes all values, reset them
+if not gender_select:
+    gender_select.value = ["F", "M"]
 
 # Create the plot based on the chosen options
 # Only show the plot once a name has been selected
 if first_name:
-    plot = df.filter(
-        (pl.col("name") == first_name)
-        & (pl.col("state").is_in(states))
-        & (pl.col("year").is_between(*years))
-        & (True if groupby_gender else (pl.col("gender") == gender_select))
-    ).plot.line(
-        x="year",
-        y="rank" if use_rank else "popularity",
-        by=["state", "gender"] if groupby_gender else "state",
-        title=f"Popularity of name: {first_name}",
-        flip_yaxis=True if use_rank else False,
-        # width=800,
-        # height=600,
-        responsive=True,
-        # xlim=years,
-    )
-    # Display the plot
-    # See: https://github.com/streamlit/streamlit/issues/5858#issuecomment-1793784439
-    # and: https://discourse.holoviz.org/t/get-underlying-bokeh-figure-object-back-from-hvplot/2918/2
-    p = hv.render(plot, backend="bokeh")
-    components.html(file_html(p, "cdn"), height=400)
-    # plot_displayed = st.plotly_chart(hv.render(plot, backend="plotly"))
+    show_matches("first_name_input")
+    if check_match(df, first_name, years, states):
+        plot = df.filter(
+            (pl.col("name") == first_name.capitalize())
+            & (pl.col("state").is_in(states))
+            & (pl.col("year").is_between(*years))
+            & (pl.col("gender").is_in(gender_select))
+        ).plot.line(
+            x="year",
+            y="rank" if use_rank else "popularity",
+            by=["state", "gender"],
+            title=f"Popularity of name: {first_name.capitalize()}"
+            if len(gender_select) != 1
+            else f"Popularity of name: {first_name.capitalize()} ({gender_select[0]})",
+            flip_yaxis=True if use_rank else False,
+            # width=800,
+            # height=600,
+            responsive=True,
+            # xlim=years,
+        )
+        # Display the plot
+        # See: https://github.com/streamlit/streamlit/issues/5858#issuecomment-1793784439
+        # and: https://discourse.holoviz.org/t/get-underlying-bokeh-figure-object-back-from-hvplot/2918/2
+        p = hv.render(plot, backend="bokeh")
+        components.html(file_html(p, "cdn"), height=400)
+        # plot_displayed = st.plotly_chart(hv.render(plot, backend="plotly"))
+    else:
+        st.write(
+            f"Name **{first_name}** not found. Try searching for a different name."
+        )
 else:
     info_box = st.info("Type a first name in the `Name` field above")
