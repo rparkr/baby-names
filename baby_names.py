@@ -160,20 +160,18 @@ def show_matches(key):
 intro = st.markdown(
 """
 # Baby name trends
-Explore trends in baby names from 1880-present (defaults to 2015-present)
+Explore trends in baby names from 1880-present (defaults to 2015-present). \
+Created by [Ryan Parker](https://github.com/rparkr "See other projects on Ryan's GitHub profile").
 
 ## How it works
 1. Type a name below and press [Enter] to see how that name's popularity has changed over time.
-2. To compare two names, separate them by a comma** (`,`).
-
-> When viewing the trends for a single name, the box below the name field shows \
-other similar names in the dataset (the ones that match the first characters \
-of the name).
+2. To compare multiple names, separate them by a comma** (`,`).
 
 **Data source:**  
 Data comes from the [United States Social Security Administration's baby names dataset](https://www.ssa.gov/oact/babynames/limits.html). \
 Learn more about it [here](https://www.ssa.gov/oact/babynames/index.html).
-""")
+"""
+)
 
 # Display the options
 col1, col2, col3, col4 = st.columns(4)
@@ -192,7 +190,10 @@ with col1:
     #     placeholder="Search for a first name",
     #     options=df["name"].unique().sort(),
     # )
-    st.html('<span style="font-size: 0.75em;">Similar names:</span>')
+    col1.markdown(
+        "Similar names:",
+        help="Shows similar names in the dataset that share the same first characters. Enabled when only one name is entered in the box above.",
+    )
     matches = col1.container(height=100)
 with col2:
     states = col2.multiselect(
@@ -245,17 +246,29 @@ if first_name:
         name_exists = all([check_match(df, name, years, states) for name in first_name])
     if name_exists:
         plot = df.filter(
-            ((pl.col("name") == first_name) if multiple_names is False else (pl.col("name").is_in(first_name)))
+            (
+                (pl.col("name") == first_name)
+                if multiple_names is False
+                else (pl.col("name").is_in(first_name))
+            )
             & (pl.col("state").is_in(states))
             & (pl.col("year").is_between(*years))
             & (pl.col("gender").is_in(gender_select))
         ).plot.line(
             x="year",
             y="rank" if use_rank else "popularity",
-            by=(["state", "gender", "name"] if multiple_names is True else ["state", "gender"]),
-            title=(f"Popularity of names: {[name for name in first_name]}" if multiple_names is True else f"Popularity of name: {first_name}"
-            if len(gender_select) != 1
-            else f"Popularity of name: {first_name} ({gender_select[0]})"),
+            by=(
+                ["state", "gender", "name"]
+                if multiple_names is True
+                else ["state", "gender"]
+            ),
+            title=(
+                f"Popularity of names: {[name for name in first_name]}"
+                if multiple_names is True
+                else f"Popularity of name: {first_name}"
+                if len(gender_select) != 1
+                else f"Popularity of name: {first_name} ({gender_select[0]})"
+            ),
             flip_yaxis=True if use_rank else False,
             # width=800,
             # height=600,
