@@ -165,7 +165,7 @@ Created by [Ryan Parker](https://github.com/rparkr "See other projects on Ryan's
 
 ## How it works
 1. Type a name below and press [Enter] to see how that name's popularity has changed over time.
-2. To compare multiple names, separate them by a comma** (`,`).
+2. To compare multiple names, separate them by a comma (`,`).
 
 **Data source:**  
 Data comes from the [United States Social Security Administration's baby names dataset](https://www.ssa.gov/oact/babynames/limits.html). \
