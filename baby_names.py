@@ -156,6 +156,25 @@ def show_matches(key):
     )
 
 
+# Explanation text
+intro = st.markdown(
+"""
+# Baby name trends
+Explore trends in baby names from 1880-present (defaults to 2015-present)
+
+## How it works
+1. Type a name below and press [Enter] to see how that name's popularity has changed over time.
+2. To compare two names, separate them by a comma** (`,`).
+
+> When viewing the trends for a single name, the box below the name field shows \
+other similar names in the dataset (the ones that match the first characters \
+of the name).
+
+**Data source:**  
+Data comes from the [United States Social Security Administration's baby names dataset](https://www.ssa.gov/oact/babynames/limits.html). \
+Learn more about it [here](https://www.ssa.gov/oact/babynames/index.html).
+""")
+
 # Display the options
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -173,6 +192,7 @@ with col1:
     #     placeholder="Search for a first name",
     #     options=df["name"].unique().sort(),
     # )
+    st.html('<span style="font-size: 0.75em;">Similar names:</span>')
     matches = col1.container(height=100)
 with col2:
     states = col2.multiselect(
@@ -203,27 +223,46 @@ years = st.slider(
 if not gender_select:
     gender_select.value = ["F", "M"]
 
+# Create a list if multiple names were provided, removing any extra whitespace
+multiple_names = False
+if first_name is not None and "," in first_name:
+    first_name = [name.strip().capitalize() for name in first_name.split(",")]
+    multiple_names = True
+elif first_name is not None:
+    first_name = first_name.capitalize()
+
+# Ensure the names provided exist in the dataset
+name_exists = False
+
 # Create the plot based on the chosen options
 # Only show the plot once a name has been selected
 if first_name:
-    show_matches("first_name_input")
-    if check_match(df, first_name, years, states):
+    if multiple_names is False:
+        # Show name matches if only one name was provided
+        show_matches("first_name_input")
+        name_exists = check_match(df, first_name, years, states)
+    else:
+        name_exists = all([check_match(df, name, years, states) for name in first_name])
+    if name_exists:
         plot = df.filter(
-            (pl.col("name") == first_name.capitalize())
+            ((pl.col("name") == first_name) if multiple_names is False else (pl.col("name").is_in(first_name)))
             & (pl.col("state").is_in(states))
             & (pl.col("year").is_between(*years))
             & (pl.col("gender").is_in(gender_select))
         ).plot.line(
             x="year",
             y="rank" if use_rank else "popularity",
-            by=["state", "gender"],
-            title=f"Popularity of name: {first_name.capitalize()}"
+            by=(["state", "gender", "name"] if multiple_names is True else ["state", "gender"]),
+            title=(f"Popularity of names: {[name for name in first_name]}" if multiple_names is True else f"Popularity of name: {first_name}"
             if len(gender_select) != 1
-            else f"Popularity of name: {first_name.capitalize()} ({gender_select[0]})",
+            else f"Popularity of name: {first_name} ({gender_select[0]})"),
             flip_yaxis=True if use_rank else False,
             # width=800,
             # height=600,
             responsive=True,
+            rot=45,
+            legend="right",
+            hover_cols=["count"],
             # xlim=years,
         )
         # Display the plot
@@ -235,8 +274,15 @@ if first_name:
         components.html(file_html(p, "cdn"), height=400)
         # plot_displayed = st.plotly_chart(hv.render(plot, backend="plotly"))
     else:
-        st.write(
-            f"Name **{first_name}** not found. Try searching for a different name."
-        )
+        if multiple_names:
+            for name in first_name:
+                if not check_match(df, name, years, states):
+                    st.write(
+                        f"Name **{name}** not found. Try searching for a different name."
+                    )
+        else:
+            st.write(
+                f"Name **{first_name}** not found. Try searching for a different name."
+            )
 else:
     info_box = st.info("Type a first name in the `Name` field above")
