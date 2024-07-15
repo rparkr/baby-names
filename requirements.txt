@@ -1,6 +1,6 @@
-bokeh < 3.5.0
-holoviews
-hvplot
-polars
-requests
-streamlit
+bokeh==3.4.1
+holoviews==1.19.0
+hvplot==0.10.0
+polars==0.20.31
+requests==2.32.3
+streamlit==1.35.0
