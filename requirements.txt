@@ -1,6 +1,7 @@
 bokeh==3.4.1
+fake-useragent>=2.2.0
 holoviews==1.19.0
 hvplot==0.10.0
-polars>=0.20.31
 httpx>=0.28.1
+polars>=0.20.31
 streamlit>=1.35.0
