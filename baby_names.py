@@ -12,10 +12,12 @@ import zipfile
 from bokeh.embed import file_html
 from fake_useragent import UserAgent
 import holoviews as hv
-import polars as pl
+import hvplot.polars  # load .hvplot namespace to Polars dataframes
 import httpx
+import polars as pl
 import streamlit as st
 import streamlit.components.v1 as components
+
 
 hv.extension("bokeh")
 # hv.extension("plotly")
@@ -265,7 +267,7 @@ if first_name:
             & (pl.col("state").is_in(states))
             & (pl.col("year").is_between(*years))
             & (pl.col("gender").is_in(gender_select))
-        ).plot.line(
+        ).hvplot.line(
             x="year",
             y="rank" if use_rank else "popularity",
             by=(
@@ -296,7 +298,7 @@ if first_name:
         # Hide the toolbar to save space. See: https://stackoverflow.com/a/59108510/17005348
         # p.toolbar.autohide = True
         components.html(file_html(p, "cdn"), height=400)
-        # plot_displayed = st.plotly_chart(hv.render(plot, backend="plotly"))
+        # plot_displayed = st.hvplotly_chart(hv.render(plot, backend="plotly"))
     else:
         if multiple_names:
             for name in first_name:
