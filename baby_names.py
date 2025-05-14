@@ -10,15 +10,20 @@ import zipfile
 
 # External packages
 from bokeh.embed import file_html
+from fake_useragent import UserAgent
 import holoviews as hv
 import polars as pl
-import requests
+import httpx
 import streamlit as st
 import streamlit.components.v1 as components
 
 hv.extension("bokeh")
 # hv.extension("plotly")
 pl.enable_string_cache()
+
+# Set up a user agent string to mimic a browser.
+# Otherwise, the server returns a 403 Forbidden error.
+ua = UserAgent()
 
 st.set_page_config(
     page_title="Baby name trends",
@@ -43,11 +48,17 @@ def load_data() -> pl.DataFrame:
     Data.gov: State baby names: https://catalog.data.gov/dataset/baby-names-from-social-security-card-applications-state-and-district-of-columbia-data
     """
     zip_national = BytesIO(
-        requests.get("https://www.ssa.gov/oact/babynames/names.zip").content
+        httpx.get(
+            "https://www.ssa.gov/oact/babynames/names.zip",
+            # Add a user agent that mimics a browser's user agent,
+            # otherwise the server sends a 403 Forbidden error.
+            headers={"User-Agent": ua.chrome}
+        ).content
     )
     zip_state = BytesIO(
-        requests.get(
-            "https://www.ssa.gov/oact/babynames/state/namesbystate.zip"
+        httpx.get(
+            "https://www.ssa.gov/oact/babynames/state/namesbystate.zip",
+            headers={"User-Agent": ua.chrome}
         ).content
     )
     # Work with the ZIP files in memory to extract their contents
